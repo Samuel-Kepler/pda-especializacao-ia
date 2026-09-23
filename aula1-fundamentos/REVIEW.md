@@ -174,24 +174,7 @@ só confirmou o que o `npm view` já tinha mostrado.
 
 ## Parágrafo — contexto / temperatura / alucinação (rascunho, ajustar pra minhas palavras)
 
-> Onde apareceu *temperatura/não-determinismo* de forma mais clara foi no LAB 2: rodando o mesmo
-> prompt 5x em T=0 eu esperava 5 respostas idênticas, mas a rodada 3 mudou a fórmula do peso e
-> quebrou a lógica — determinístico não é sinônimo de correto. Em T=2 a variação explodiu: três
-> abordagens diferentes pro mesmo problema, uma resposta vazia, e um bug de precedência de operador
-> que só aparece rodando o teste, não lendo o código. *Contexto* apareceu na diferença entre pedir
-> a lib inexistente sem e com o `context7` — no meu caso o `CLAUDE.md` já tinha instruído o agente a
-> verificar antes de responder, então nem cheguei a ver a *alucinação* clássica do pacote inventado;
-> em vez disso vi o agente consultando `npm view` por conta própria. Isso me convenceu de que a
-> defesa contra alucinação não é só ferramenta (context7) — é regra escrita e testes que rodam de
-> verdade, porque a mesma pergunta pode sair certa numa hora e quebrada na outra.
+> O LAB 2 deixou escancarada a relação entre temperatura e não-determinismo. Rodando o mesmo prompt cinco vezes em $T=0$, eu esperava cinco respostas idênticas. Só que na terceira rodada o modelo mudou a fórmula do peso e quebrou a lógica toda — o que prova que determinístico não significa correto. Já em $T=2$, o cenário descarrilou: foram três abordagens completamente diferentes pro mesmo problema, uma resposta em branco e um bug de precedência de operador que eu só peguei executando o teste, porque lendo o código passava batido.Na parte de contexto, a diferença ficou clara quando comparei pedir uma biblioteca inexistente com e sem o context7. No meu setup, como o CLAUDE.md já instruía o agente a validar informações antes de responder, eu nem cheguei a ver a alucinação clássica do pacote inventado — o próprio agente tomou a iniciativa de rodar um npm view para checar. Isso me provou que a melhor defesa contra alucinação não é depender só de uma ferramenta isolada: precisa de instrução bem alinhada no prompt/contexto e de testes automatizados rodando de verdade, até porque a exata mesma pergunta pode dar certo agora e quebrar na próxima execução.
 
 ---
 
-## Pendente (só eu consigo fazer, fora do Claude Code)
-
-- [x] `context7` conectado (`/mcp` mostrando `context7 ✓ 2 tools`) — resolvido: o servidor tinha
-      ficado desabilitado num `.claude/settings.local.json` residual; removi o arquivo e reconectei.
-- [ ] Print de tela (imagem, não texto colado) do `/mcp` e do `/status`, pra anexar no PR/canal.
-- [ ] Ajustar o parágrafo acima pras minhas próprias palavras antes de colar no canal.
-- [ ] Bônus extra (opcional): rodar o desafio 3 (`fetchUsuario`) duas vezes em sessões novas e
-      comparar os diffs, do mesmo jeito que fiz com `validaCpf` no LAB 2.
