@@ -112,12 +112,86 @@ que foi exatamente o que segui abaixo.
 
 ---
 
-## Pendente (precisa ser feito por mim, fora do Claude Code)
+## LAB 1 — Tokenização (platform.openai.com/tokenizer)
 
-- [ ] Print do `/mcp` (context7 conectado) — `.mcp.json` já configurado localmente
-      (`claude mcp add context7 -s project -- npx -y @upstash/context7-mcp`), falta abrir o
-      Claude Code interativo e tirar o print.
-- [ ] Print do `/status`
-- [ ] Parágrafo (5–8 linhas) sobre onde apareceu *contexto*, *temperatura/não-determinismo* ou
-      *alucinação* na minha sessão de hoje (labs 1 e 2 do `GUIA-DO-ALUNO.md`)
-- [ ] Bônus (opcional): rodar o desafio 3 duas vezes em sessões novas e comparar os diffs
+| item | tokens | caracteres | observação |
+|---|---|---|---|
+| `Programadores do Amanhã` | 5 | 23 | "Programadores" quebra em "Program" + "adores" |
+| Parágrafo em português | 20 | 85 | |
+| Mesmo parágrafo em inglês | 17 | 87 | **menos tokens que o PT**, mesmo com mais caracteres |
+| `src/validaCpf.js` inteiro | 277 | 842 | código é ~0,33 token/caractere vs. ~0,2–0,24 da prosa — bem mais denso |
+| `1234567890` | 4 | 10 | |
+| `1 2 3 4 5 6 7 8 9 0` | 19 | 19 | espaçar os dígitos quase quintuplicou o custo em token |
+
+**O que custa mais token — português ou inglês? código ou prosa?** Português custou mais que
+inglês (20 vs. 17, mesmo o inglês tendo *mais* caracteres) — acentos e a morfologia do português
+quebram em mais pedaços no vocabulário do tokenizer, que foi treinado majoritariamente em inglês.
+Código custou muito mais que prosa por caractere: símbolos, indentação e nomes de variável em
+`camelCase` não colam com os tokens comuns do vocabulário do jeito que palavras inteiras colam.
+
+## LAB 2 — Temperatura (Google AI Studio, modelo `gemma-4-26b-a4b-it`)
+
+Prompt fixo: `Escreva uma função JavaScript validaCpf(cpf) que retorna true ou false. Só o código, sem explicação.`
+Cada rodada foi numa sessão nova (sem contexto da rodada anterior).
+
+**T = 0, 5 rodadas** — a lógica central ficou quase igual em 4 das 5:
+
+| rodada | o que mudou vs. a anterior |
+|--------|------|
+| 1 | baseline: `base[i]`, peso `(base.length + 1 - i)`, acesso `cpf[9]` |
+| 2 | só troca de sintaxe: `base.charAt(i)` / `cpf.charAt(9)` em vez de colchetes |
+| 3 | **mudança funcional**: peso virou `(base.length - i)`, sem o `+1` — quebra o cálculo do dígito |
+| 4 | igual à rodada 1 |
+| 5 | igual à rodada 1 |
+
+**T = 2 (máximo), 5 rodadas** — muito mais variação, inclusive degeneração:
+
+| rodada | o que mudou vs. a anterior |
+|--------|------|
+| 1 | abordagem diferente da família toda: loops `1..9`/`1..10`, pesos `(11-i)`/`(12-i)`, e **citou uma fonte externa** (`mco2.com.br`) mesmo com "Grounding with Google Search" desligado |
+| 2 | **resposta vazia** (só um `.`) com uma citação pra um repositório GitHub aleatório — degenerou |
+| 3 | igual à rodada 1 (mesma abordagem, mesma citação) |
+| 4 | terceira abordagem: peso decrescente (`peso--`) e fórmula do resto invertida (`11 - resto`) |
+| 5 | variação da abordagem original, mas com **bug de precedência de operador**: `parseInt(base[i]) * base.length - i` sem parênteses — não é `* (base.length - i)`, é `(... * base.length) - i` |
+
+**Se o mesmo prompt dá respostas diferentes, o que isso muda em como eu testo código gerado por IA?**
+Em T=0 ainda apareceu uma variação funcional (rodada 3) — ou seja, mesmo "determinístico" não é
+garantia. Em T=2 apareceu uma resposta vazia e um bug de precedência que um `git diff` rápido não
+pega de olho (parece código correto até você rodar o teste). Isso é o argumento inteiro pra nunca
+aceitar código de IA sem rodar os testes: a mesma pergunta, no mesmo minuto, pode gerar a versão
+certa e a versão quebrada.
+
+## Bônus — alucinação vs. context7 (`@pda/valida-cpf`, lib que não existe)
+
+Perguntei sem pedir o context7 explicitamente: `como instalo e uso a lib @pda/valida-cpf?`
+O agente **não alucinou** — foi direto checar `npm view @pda/valida-cpf` (deu 404) antes de
+responder, e concluiu que a lib não existe, sugerindo usar o `validaCpf` local do projeto.
+Perguntei de novo pedindo `usando o context7` e ele confirmou pela mesma via (resolve-library-id
+não achou nada). Resultado honesto: diferente do que o guia da aula esperava (o clássico
+"ele inventa o pacote"), aqui o `CLAUDE.md` ("se não tiver certeza, consulte a documentação em vez
+de chutar") já bastou pra evitar a alucinação antes mesmo do context7 entrar em ação — o context7
+só confirmou o que o `npm view` já tinha mostrado.
+
+## Parágrafo — contexto / temperatura / alucinação (rascunho, ajustar pra minhas palavras)
+
+> Onde apareceu *temperatura/não-determinismo* de forma mais clara foi no LAB 2: rodando o mesmo
+> prompt 5x em T=0 eu esperava 5 respostas idênticas, mas a rodada 3 mudou a fórmula do peso e
+> quebrou a lógica — determinístico não é sinônimo de correto. Em T=2 a variação explodiu: três
+> abordagens diferentes pro mesmo problema, uma resposta vazia, e um bug de precedência de operador
+> que só aparece rodando o teste, não lendo o código. *Contexto* apareceu na diferença entre pedir
+> a lib inexistente sem e com o `context7` — no meu caso o `CLAUDE.md` já tinha instruído o agente a
+> verificar antes de responder, então nem cheguei a ver a *alucinação* clássica do pacote inventado;
+> em vez disso vi o agente consultando `npm view` por conta própria. Isso me convenceu de que a
+> defesa contra alucinação não é só ferramenta (context7) — é regra escrita e testes que rodam de
+> verdade, porque a mesma pergunta pode sair certa numa hora e quebrada na outra.
+
+---
+
+## Pendente (só eu consigo fazer, fora do Claude Code)
+
+- [x] `context7` conectado (`/mcp` mostrando `context7 ✓ 2 tools`) — resolvido: o servidor tinha
+      ficado desabilitado num `.claude/settings.local.json` residual; removi o arquivo e reconectei.
+- [ ] Print de tela (imagem, não texto colado) do `/mcp` e do `/status`, pra anexar no PR/canal.
+- [ ] Ajustar o parágrafo acima pras minhas próprias palavras antes de colar no canal.
+- [ ] Bônus extra (opcional): rodar o desafio 3 (`fetchUsuario`) duas vezes em sessões novas e
+      comparar os diffs, do mesmo jeito que fiz com `validaCpf` no LAB 2.
